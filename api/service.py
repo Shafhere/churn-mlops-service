@@ -7,10 +7,7 @@ import joblib
 import numpy as np
 import pandas as pd
 
-from api.schemas import (
-    CustomerInput, Factor, PredictionOutput
-)
-
+from api.schemas import CustomerInput, Factor, PredictionOutput
 
 ROOT = Path(__file__).resolve().parents[1]
 

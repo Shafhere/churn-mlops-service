@@ -13,7 +13,6 @@ from dotenv import load_dotenv
 
 from api.schemas import CustomerInput
 
-
 load_dotenv(
     Path(__file__).resolve().parents[1] / ".env",
     override=False,

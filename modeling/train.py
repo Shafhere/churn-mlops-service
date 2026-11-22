@@ -9,7 +9,6 @@ import mlflow
 import mlflow.sklearn
 import pandas as pd
 import sklearn
-
 from mlflow.models import infer_signature
 from mlflow.tracking import MlflowClient
 from sklearn.dummy import DummyClassifier
@@ -18,20 +17,19 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 
 from modeling.data import (
-    RAW_DATA,
     RANDOM_STATE,
-    split_data,
+    RAW_DATA,
     make_preprocessor,
+    split_data,
 )
 from modeling.evaluation import (
-    FP_COST,
     FN_COST,
+    FP_COST,
     evaluate,
     select_threshold,
 )
 from modeling.explain import get_feature_importance
 from modeling.model_card import build_model_card
-
 
 ARTIFACT_DIR = Path("artifacts")
 CARD_PATH = Path("docs/MODEL_CARD.md")

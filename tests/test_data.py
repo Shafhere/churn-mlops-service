@@ -7,7 +7,6 @@ from modeling.data import (
 )
 from modeling.validation import validate_data
 
-
 # Synthetic customer, not real personal information.
 ROW = {
     "customerID": "customer-0",

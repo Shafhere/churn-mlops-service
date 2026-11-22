@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 from fastapi import Depends, HTTPException
 from fastapi.security import APIKeyHeader
 
-
 # Load local configuration without overriding cloud variables.
 load_dotenv(
     Path(__file__).resolve().parents[1] / ".env",

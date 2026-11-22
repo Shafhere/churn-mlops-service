@@ -4,14 +4,12 @@ import json
 import joblib
 import pandas as pd
 import pytest
-
 from fastapi.testclient import TestClient
 from sklearn.dummy import DummyClassifier
 
 from api.main import app
 from api.schemas import CustomerInput, PredictionOutput
 from api.service import ModelService
-
 
 KEY = "test-only-api-key"
 HEADERS = {"X-API-Key": KEY}

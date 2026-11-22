@@ -3,7 +3,6 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 YesNo = Literal["Yes", "No"]
 InternetAddOn = Literal[
     "Yes", "No", "No internet service"

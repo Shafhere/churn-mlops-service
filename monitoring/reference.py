@@ -7,9 +7,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from modeling.data import (
-    FEATURES, NUMERIC, RAW_DATA, split_data
-)
+from modeling.data import FEATURES, NUMERIC, RAW_DATA, split_data
 
 OUTPUT = Path("artifacts/monitor_reference.json")
 

@@ -10,12 +10,9 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from api.auth import require_api_key
-from api.schemas import (
-    BatchInput, BatchOutput, CustomerInput, PredictionOutput
-)
-from api.service import ModelService, ROOT
+from api.schemas import BatchInput, BatchOutput, CustomerInput, PredictionOutput
+from api.service import ROOT, ModelService
 from monitoring.store import MonitorStore
-
 
 logger = logging.getLogger("churnguard.api")
 logger.setLevel(logging.INFO)

@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pandas as pd
 
-
 # Expected schema of the IBM Telco dataset.
 EXPECTED_COLUMNS = [
     "customerID", "gender", "SeniorCitizen",

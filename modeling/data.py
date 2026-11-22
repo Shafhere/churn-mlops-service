@@ -2,7 +2,6 @@
 from pathlib import Path
 
 import pandas as pd
-
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import train_test_split
@@ -16,7 +15,6 @@ from modeling.validation import (
     EXPECTED_COLUMNS,
     validate_data,
 )
-
 
 RANDOM_STATE = 42
 

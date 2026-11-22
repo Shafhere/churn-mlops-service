@@ -7,7 +7,6 @@ import mlflow
 import mlflow.sklearn
 import numpy as np
 import pandas as pd
-
 from mlflow.tracking import MlflowClient
 
 from modeling.data import RAW_DATA, split_data

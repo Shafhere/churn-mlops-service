@@ -1,6 +1,5 @@
 
 import numpy as np
-
 from sklearn.metrics import (
     accuracy_score,
     average_precision_score,
@@ -11,7 +10,6 @@ from sklearn.metrics import (
     recall_score,
     roc_auc_score,
 )
-
 
 # Hypothetical business costs.
 FP_COST = 1

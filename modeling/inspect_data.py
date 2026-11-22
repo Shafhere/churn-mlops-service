@@ -1,6 +1,7 @@
 
-from pathlib import Path
 import hashlib
+from pathlib import Path
+
 import pandas as pd
 
 # Location of our original dataset
