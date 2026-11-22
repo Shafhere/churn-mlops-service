@@ -18,3 +18,16 @@ mlflow.db
 # Logs
 logs/
 *.log
+
+# MLflow and generated artifacts
+mlflow.db
+mlruns/
+mlartifacts/
+artifacts/
+
+runtime/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+.streamlit/secrets.toml
+
