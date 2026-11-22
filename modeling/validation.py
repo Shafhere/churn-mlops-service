@@ -5,205 +5,231 @@ from pathlib import Path
 import pandas as pd
 
 
-DATA_PATH = Path("data/raw/Telco-Customer-Churn.csv")
-REPORT_PATH = Path("artifacts/data_validation.json")
-
-# Columns required by the training dataset.
-EXPECTED_COLUMNS = {
-    "customerID", "gender", "SeniorCitizen", "Partner",
-    "Dependents", "tenure", "PhoneService",
-    "MultipleLines", "InternetService", "OnlineSecurity",
-    "OnlineBackup", "DeviceProtection", "TechSupport",
-    "StreamingTV", "StreamingMovies", "Contract",
+# Expected schema of the IBM Telco dataset.
+EXPECTED_COLUMNS = [
+    "customerID", "gender", "SeniorCitizen",
+    "Partner", "Dependents", "tenure",
+    "PhoneService", "MultipleLines",
+    "InternetService", "OnlineSecurity",
+    "OnlineBackup", "DeviceProtection",
+    "TechSupport", "StreamingTV",
+    "StreamingMovies", "Contract",
     "PaperlessBilling", "PaymentMethod",
     "MonthlyCharges", "TotalCharges", "Churn",
+]
+
+# Initial acceptable ranges (business assumptions).
+NUMERIC_RANGES = {
+    "SeniorCitizen": (0, 1),
+    "tenure": (0, 120),
+    "MonthlyCharges": (0, 1000),
+    "TotalCharges": (0, 100000),
+}
+
+# Accept only known categories during training.
+CATEGORIES = {
+    "gender": {"Female", "Male"},
+    "Partner": {"Yes", "No"},
+    "Dependents": {"Yes", "No"},
+    "PhoneService": {"Yes", "No"},
+    "MultipleLines": {
+        "Yes", "No", "No phone service"
+    },
+    "InternetService": {"DSL", "Fiber optic", "No"},
+    "OnlineSecurity": {
+        "Yes", "No", "No internet service"
+    },
+    "OnlineBackup": {
+        "Yes", "No", "No internet service"
+    },
+    "DeviceProtection": {
+        "Yes", "No", "No internet service"
+    },
+    "TechSupport": {
+        "Yes", "No", "No internet service"
+    },
+    "StreamingTV": {
+        "Yes", "No", "No internet service"
+    },
+    "StreamingMovies": {
+        "Yes", "No", "No internet service"
+    },
+    "Contract": {
+        "Month-to-month", "One year", "Two year"
+    },
+    "PaperlessBilling": {"Yes", "No"},
+    "PaymentMethod": {
+        "Electronic check",
+        "Mailed check",
+        "Bank transfer (automatic)",
+        "Credit card (automatic)",
+    },
+    "Churn": {"Yes", "No"},
 }
 
 
 def validate_data(df: pd.DataFrame) -> dict:
-    """Validate raw data without modifying customer records."""
+    """Check data quality without changing the dataset."""
 
     errors = []
     warnings = []
 
-    # 1. Check required columns
-    missing_columns = EXPECTED_COLUMNS - set(df.columns)
-
-    if missing_columns:
-        errors.append(
-            f"Missing columns: {sorted(missing_columns)}"
-        )
+    # Check dataset structure.
+    missing = sorted(
+        set(EXPECTED_COLUMNS) - set(df.columns)
+    )
 
     if df.empty:
-        errors.append("Dataset has no rows")
+        errors.append("Dataset is empty")
 
-    # Stop detailed checks when required columns are absent.
-    if not missing_columns and not df.empty:
-
-        extra_columns = set(df.columns) - EXPECTED_COLUMNS
-
-        if extra_columns:
-            warnings.append(
-                f"Extra columns: {sorted(extra_columns)}"
-            )
-
-        # 2. Check missing and blank required values
-        # TotalCharges is handled separately.
-        for column in EXPECTED_COLUMNS - {"TotalCharges"}:
-            text = df[column].astype("string").str.strip()
-
-            missing_count = int(
-                (text.isna() | text.eq("")).sum()
-            )
-
-            if missing_count:
-                errors.append(
-                    f"{column}: {missing_count} missing/blank values"
-                )
-
-        # 3. Check duplicate customer identifiers
-        customer_ids = (
-            df["customerID"].astype("string").str.strip()
+    if missing:
+        errors.append(
+            f"Missing required columns: {missing}"
         )
 
-        duplicates = int(
-            customer_ids.dropna().duplicated().sum()
+    if errors:
+        return {
+            "status": "FAIL",
+            "rows": len(df),
+            "errors": errors,
+            "warnings": warnings,
+        }
+
+    extra = sorted(
+        set(df.columns) - set(EXPECTED_COLUMNS)
+    )
+
+    if extra:
+        warnings.append(
+            f"Unexpected columns (ignored in modeling): {extra}"
         )
 
-        if duplicates:
+    # Check missing and blank values.
+    for column in EXPECTED_COLUMNS:
+        raw = df[column].astype("string").str.strip()
+        blank = raw.isna() | raw.eq("").fillna(False)
+        count = int(blank.sum())
+
+        if count:
+            message = (
+                f"{column}: {count} missing or blank values"
+            )
+
+            if column == "TotalCharges":
+                warnings.append(message)
+            else:
+                errors.append(message)
+
+    # Check duplicate customers.
+    ids = (
+        df["customerID"].astype("string").str.strip()
+    )
+
+    duplicates = int(ids.duplicated().sum())
+
+    if duplicates:
+        errors.append(
+            f"Duplicate customer IDs: {duplicates}"
+        )
+
+    # Check numeric values and ranges.
+    for column, (low, high) in NUMERIC_RANGES.items():
+        raw = df[column].astype("string").str.strip()
+        blank = raw.isna() | raw.eq("").fillna(False)
+
+        values = pd.to_numeric(
+            raw, errors="coerce"
+        )
+
+        invalid = int(
+            (values.isna() & ~blank).sum()
+        )
+
+        outside = int(
+            (
+                values.notna()
+                & ~values.between(low, high)
+            ).sum()
+        )
+
+        if invalid:
             errors.append(
-                f"Duplicate customer IDs: {duplicates}"
+                f"{column}: {invalid} nonnumeric values"
             )
 
-        # 4. Validate numeric fields and reasonable ranges
-        # These upper limits are configurable business assumptions.
-        numeric_rules = [
-            ("tenure", 0, 120),
-            ("MonthlyCharges", 0, 1000),
-            ("TotalCharges", 0, 100000),
-            ("SeniorCitizen", 0, 1),
-        ]
-
-        for column, lower, upper in numeric_rules:
-            raw_values = (
-                df[column].astype("string").str.strip()
+        if outside:
+            errors.append(
+                f"{column}: {outside} values outside "
+                f"[{low}, {high}]"
             )
 
-            numbers = pd.to_numeric(
-                raw_values, errors="coerce"
-            )
-
-            blanks = (
-                raw_values.isna() | raw_values.eq("")
-            )
-
-            invalid = int(
-                (numbers.isna() & ~blanks).sum()
-            )
-
-            outside = int(
+        if column in {"tenure", "SeniorCitizen"}:
+            fractional = int(
                 (
-                    numbers.notna()
-                    & ~numbers.between(lower, upper)
+                    values.notna()
+                    & (values % 1 != 0)
                 ).sum()
             )
 
-            if invalid:
+            if fractional:
                 errors.append(
-                    f"{column}: {invalid} non-numeric values"
+                    f"{column}: {fractional} noninteger values"
                 )
 
-            if outside:
-                errors.append(
-                    f"{column}: {outside} values outside "
-                    f"{lower}-{upper}"
-                )
+    # Check categorical values.
+    for column, allowed in CATEGORIES.items():
+        values = (
+            df[column]
+            .dropna()
+            .astype("string")
+            .str.strip()
+        )
 
-            # These columns must contain whole numbers.
-            if column in {"tenure", "SeniorCitizen"}:
-                fractions = int(
-                    (
-                        numbers.notna()
-                        & (numbers % 1 != 0)
-                    ).sum()
-                )
+        invalid_count = int(
+            (
+                ~values.isin(allowed)
+                & values.ne("")
+            ).sum()
+        )
 
-                if fractions:
-                    errors.append(
-                        f"{column}: {fractions} non-integer values"
-                    )
-
-            # Blank TotalCharges may be handled in preprocessing.
-            if column == "TotalCharges":
-                blank_count = int(blanks.sum())
-
-                if blank_count:
-                    warnings.append(
-                        f"TotalCharges: {blank_count} blank "
-                        "values; review during preprocessing"
-                    )
-
-        # 5. Check important categorical values
-        category_rules = {
-            "Churn": {"Yes", "No"},
-            "Contract": {
-                "Month-to-month", "One year", "Two year"
-            },
-        }
-
-        for column, allowed in category_rules.items():
-            observed = set(
-                df[column]
-                .dropna()
-                .astype("string")
-                .str.strip()
+        if invalid_count:
+            errors.append(
+                f"{column}: {invalid_count} invalid categories"
             )
 
-            unexpected = sorted(observed - allowed)
-
-            if unexpected:
-                errors.append(
-                    f"{column}: {len(unexpected)} "
-                    "unexpected category value(s)"
-                )
-
-    # 6. Create a summary with no customer-level data
     return {
         "status": "PASS" if not errors else "FAIL",
         "rows": len(df),
-        "columns": len(df.columns),
         "errors": errors,
         "warnings": warnings,
     }
 
 
 def main():
-    df = pd.read_csv(DATA_PATH)
+    path = Path(
+        "data/raw/Telco-Customer-Churn.csv"
+    )
+
+    df = pd.read_csv(
+        path, dtype={"customerID": "string"}
+    )
 
     report = validate_data(df)
 
-    REPORT_PATH.parent.mkdir(
+    output = Path(
+        "artifacts/data_validation.json"
+    )
+
+    output.parent.mkdir(
         parents=True, exist_ok=True
     )
 
-    REPORT_PATH.write_text(
+    output.write_text(
         json.dumps(report, indent=2),
         encoding="utf-8",
     )
 
-    print(f"Status: {report['status']}")
-    print(
-        f"Rows: {report['rows']} | "
-        f"Columns: {report['columns']}"
-    )
-
-    for message in report["errors"]:
-        print("ERROR:", message)
-
-    for message in report["warnings"]:
-        print("WARNING:", message)
-
-    print(f"Report: {REPORT_PATH}")
+    print(json.dumps(report, indent=2))
 
     if report["status"] == "FAIL":
         raise SystemExit(1)
