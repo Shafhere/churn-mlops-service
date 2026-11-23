@@ -1,33 +1,28 @@
-# Python environment
+# Virtual environments and Python caches
 .venv/
 __pycache__/
+*.py[cod]
 .pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 
-# Private configuration
+# Secrets and local configuration
 .env
 .env.*
 !.env.example
+.streamlit/secrets.toml
 
-# Customer data and generated files
+# Raw customer data and generated ML artifacts
 data/raw/
 data/processed/
 artifacts/
 mlruns/
+mlartifacts/
 mlflow.db
-
-# Logs
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+runtime/
 logs/
 *.log
-
-# MLflow and generated artifacts
-mlflow.db
-mlruns/
-mlartifacts/
-artifacts/
-
-runtime/
-*.sqlite
-*.sqlite-shm
-*.sqlite-wal
-.streamlit/secrets.toml
-

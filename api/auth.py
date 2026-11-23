@@ -2,6 +2,7 @@
 import os
 import secrets
 from pathlib import Path
+from typing import Annotated
 
 from dotenv import load_dotenv
 from fastapi import Depends, HTTPException
@@ -20,7 +21,7 @@ key_header = APIKeyHeader(
 
 
 def require_api_key(
-    provided: str | None = Depends(key_header),
+    provided: Annotated[str | None, Depends(key_header)],
 ):
     expected = os.getenv("CHURNGUARD_API_KEY")
 

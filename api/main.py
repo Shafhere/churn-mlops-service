@@ -4,6 +4,7 @@ import os
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Annotated
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -66,6 +67,9 @@ async def record_metrics(request: Request, call_next):
 
     try:
         response = await call_next(request)
+        # Responses may contain sensitive prediction details.
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Content-Type-Options"] = "nosniff"
         status = response.status_code
         return response
 
@@ -127,6 +131,10 @@ def get_monitor(request: Request) -> MonitorStore:
     return request.app.state.monitor
 
 
+ServiceDep = Annotated[ModelService, Depends(get_service)]
+MonitorDep = Annotated[MonitorStore, Depends(get_monitor)]
+
+
 @app.get("/health")
 def health(request: Request):
     return {
@@ -142,7 +150,7 @@ def health(request: Request):
     dependencies=[Depends(require_api_key)],
 )
 def model_info(
-    service: ModelService = Depends(get_service),
+    service: ServiceDep,
 ):
     return {
         "model_name": service.model_name,
@@ -160,8 +168,8 @@ def model_info(
 def predict(
     customer: CustomerInput,
     request: Request,
-    service: ModelService = Depends(get_service),
-    monitor: MonitorStore = Depends(get_monitor),
+    service: ServiceDep,
+    monitor: MonitorDep,
 ):
     output = service.predict([customer])[0]
 
@@ -188,8 +196,8 @@ def predict(
 def predict_batch(
     batch: BatchInput,
     request: Request,
-    service: ModelService = Depends(get_service),
-    monitor: MonitorStore = Depends(get_monitor),
+    service: ServiceDep,
+    monitor: MonitorDep,
 ):
     outputs = service.predict(batch.records)
 
@@ -216,7 +224,7 @@ def predict_batch(
     dependencies=[Depends(require_api_key)],
 )
 def monitoring_summary(
-    monitor: MonitorStore = Depends(get_monitor),
+    monitor: MonitorDep,
 ):
     return monitor.summary()
 
@@ -226,6 +234,6 @@ def monitoring_summary(
     dependencies=[Depends(require_api_key)],
 )
 def monitoring_drift(
-    monitor: MonitorStore = Depends(get_monitor),
+    monitor: MonitorDep,
 ):
     return monitor.drift()

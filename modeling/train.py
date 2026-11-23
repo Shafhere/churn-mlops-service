@@ -5,12 +5,8 @@ import platform
 from pathlib import Path
 
 import joblib
-import mlflow
-import mlflow.sklearn
 import pandas as pd
 import sklearn
-from mlflow.models import infer_signature
-from mlflow.tracking import MlflowClient
 from sklearn.dummy import DummyClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
@@ -84,6 +80,11 @@ def get_candidates():
 
 
 def main():
+    import mlflow
+    import mlflow.sklearn
+    from mlflow.models import infer_signature
+    from mlflow.tracking import MlflowClient
+
     # MLflow uses one local database for experiments and
     # registered model metadata.
     mlflow.set_tracking_uri(TRACKING_URI)
@@ -282,6 +283,7 @@ def main():
         )
 
         joblib.dump(best_model, model_file)
+        artifact_hash = hashlib.sha256(model_file.read_bytes()).hexdigest()
 
         # STEP 6: Complete versioned metadata.
         report = {
@@ -308,6 +310,7 @@ def main():
                 "run_id": run.info.run_id,
             },
             "model_file": str(model_file.as_posix()),
+            "model_artifact_sha256": artifact_hash,
             "validation_comparison": results,
             "test_metrics": test_metrics,
             "feature_importance": importance,

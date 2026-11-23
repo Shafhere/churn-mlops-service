@@ -1,29 +1,20 @@
-
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1
-
 WORKDIR /app
 
-# Install serving dependencies before copying code.
-COPY requirements-serving.txt .
-RUN python -m pip install -r requirements-serving.txt
+COPY requirements-serving.txt ./
+RUN python -m pip install --no-cache-dir -r requirements-serving.txt
 
-# The API needs inference and monitoring code only.
 COPY api/ ./api/
 COPY modeling/ ./modeling/
 COPY monitoring/ ./monitoring/
 
-# Run as a non-root user.
 RUN useradd --create-home --uid 10001 appuser \
     && mkdir -p /app/artifacts /app/runtime \
     && chown -R appuser:appuser /app
-
 USER appuser
-
 EXPOSE 8000
-
-CMD ["python", "-m", "uvicorn", "api.main:app", \
-     "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "-m", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
