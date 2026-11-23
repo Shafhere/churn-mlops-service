@@ -1,3 +1,4 @@
+import hashlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -6,6 +7,7 @@ from typing import Any
 import joblib
 import numpy as np
 import pandas as pd
+import sklearn
 
 from api.schemas import CustomerInput, Factor, PredictionOutput
 
@@ -31,6 +33,14 @@ class ModelService:
             )
         )
 
+        # Pickled scikit-learn models require a matching runtime version.
+        trained_sklearn = metadata.get("runtime", {}).get("scikit_learn")
+        if trained_sklearn and sklearn.__version__ != trained_sklearn:
+            raise RuntimeError(
+                f"Incompatible scikit-learn: model was trained with "
+                f"{trained_sklearn}, service has {sklearn.__version__}"
+            )
+
         version = str(metadata["registry"]["version"])
 
         if not (version.isascii() and version.isdigit()):
@@ -41,9 +51,16 @@ class ModelService:
         if not 0 < threshold < 1:
             raise ValueError("Invalid threshold")
 
-        model = joblib.load(
-            artifact_dir / f"model_v{version}.joblib"
-        )
+        model_path = artifact_dir / f"model_v{version}.joblib"
+        expected_hash = metadata.get("model_artifact_sha256")
+        if not expected_hash:
+            raise ValueError("Model artifact SHA-256 is missing")
+        actual_hash = hashlib.sha256(model_path.read_bytes()).hexdigest()
+        if actual_hash != expected_hash:
+            raise ValueError("Model artifact fingerprint mismatch")
+
+        # joblib uses pickle: load only artifacts from a trusted release.
+        model = joblib.load(model_path)
 
         if not callable(
             getattr(model, "predict_proba", None)

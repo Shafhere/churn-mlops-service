@@ -1,0 +1,24 @@
+# Run together with ../docker-compose.yml (from the project root).
+# A DNS name pointed to the instance is required for public HTTPS.
+services:
+  proxy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    environment:
+      CHURNGUARD_DOMAIN: ${CHURNGUARD_DOMAIN:?Set your public DNS name in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      ui:
+        condition: service_started
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  caddy-data:
+  caddy-config:

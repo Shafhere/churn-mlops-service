@@ -1,5 +1,7 @@
 
+import hashlib
 import json
+from typing import ClassVar
 
 import joblib
 import pandas as pd
@@ -43,7 +45,7 @@ class FakeService:
     version = "test"
     model_name = "test_model"
     threshold = 0.4
-    test_metrics = {"recall": 0.8}
+    test_metrics: ClassVar[dict[str, float]] = {"recall": 0.8}
 
     def predict(self, records):
         return [
@@ -187,6 +189,9 @@ def test_service_loads_versioned_artifact(tmp_path):
         "threshold": 0.45,
         "selected_model": "dummy_baseline",
         "test_metrics": {"recall": 0.5},
+        "model_artifact_sha256": hashlib.sha256(
+            (artifacts / "model_v3.joblib").read_bytes()
+        ).hexdigest(),
     }
 
     (artifacts / "model_metadata.json").write_text(

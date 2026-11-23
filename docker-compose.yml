@@ -1,13 +1,13 @@
-
+# Local, single-instance deployment. No ports are exposed externally.
 services:
   api:
     build:
       context: .
       dockerfile: Dockerfile.api
+    image: churnguard-api:local
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
+      CHURNGUARD_API_KEY: ${CHURNGUARD_API_KEY:?Run python scripts/create_env.py first}
       CHURNGUARD_MONITOR_DB_DIR: /app/runtime
     ports:
       - "127.0.0.1:8000:8000"
@@ -15,30 +15,31 @@ services:
       - ./artifacts:/app/artifacts:ro
       - monitoring-data:/app/runtime
     healthcheck:
-      test:
-        - CMD
-        - python
-        - -c
-        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 30s
+    security_opt:
+      - no-new-privileges:true
 
   ui:
     build:
       context: .
       dockerfile: Dockerfile.ui
+    image: churnguard-ui:local
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
+      CHURNGUARD_API_KEY: ${CHURNGUARD_API_KEY:?Run python scripts/create_env.py first}
+      CHURNGUARD_UI_PASSWORD: ${CHURNGUARD_UI_PASSWORD:?Run python scripts/create_env.py first}
       CHURNGUARD_API_URL: http://api:8000
     ports:
       - "127.0.0.1:8501:8501"
     depends_on:
       api:
         condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
 
 volumes:
   monitoring-data:

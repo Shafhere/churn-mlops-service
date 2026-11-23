@@ -74,12 +74,12 @@ def build_reference(X_train):
                 values, errors="coerce"
             ).dropna()
 
-            edges = sorted(set(
+            edges = sorted({
                 float(x)
                 for x in np.quantile(
                     numeric, [0.2, 0.4, 0.6, 0.8]
                 )
-            ))
+            })
 
             counts = {
                 f"bin_{i}": 0

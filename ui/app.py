@@ -32,7 +32,7 @@ def setting(name, default=""):
 
     try:
         return st.secrets.get(name, default)
-    except Exception:
+    except (FileNotFoundError, KeyError, OSError):
         return default
 
 
@@ -54,7 +54,7 @@ def api(method, endpoint, data=None):
     response = requests.request(
         method,
         API_URL + endpoint,
-        headers={"X-API-Key": API_KEY},
+        headers={"X-API-Key": API_KEY, "Cache-Control": "no-store"},
         json=data,
         timeout=60,
     )
@@ -99,7 +99,7 @@ st.title("ChurnGuard MLOps")
 st.caption("Customer Churn Prediction and Monitoring")
 
 if st.sidebar.button("Sign Out"):
-    st.session_state["authenticated"] = False
+    st.session_state.clear()
     st.rerun()
 
 
@@ -299,6 +299,9 @@ with batch_tab:
                 uploaded,
                 dtype={"customerID": "string"},
             )
+
+            if "TotalCharges" not in df.columns:
+                raise ValueError("Missing column: TotalCharges")
 
             # Convert blank TotalCharges to missing values.
             # The trained ML pipeline will impute them.
